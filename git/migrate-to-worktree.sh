@@ -185,9 +185,9 @@ echo "  2. Remove the original repository:"
 echo "     rm -rf $REPO_PATH"
 echo
 echo "  3. Rename and fix worktree paths (copy and run this ONE command):"
-echo "     ${GREEN}mv $NEW_REPO_PATH $REPO_PATH && \\"
+echo "     mv $NEW_REPO_PATH $REPO_PATH && \\"
 echo "     find $REPO_PATH -name .git -type f -exec sed -i '' \"s|$NEW_REPO_PATH|$REPO_PATH|g\" {} + && \\"
-echo "     find $REPO_PATH/.bare/worktrees -name gitdir -exec sed -i '' \"s|$NEW_REPO_PATH|$REPO_PATH|g\" {} +${NC}"
+echo "     find $REPO_PATH/.bare/worktrees -name gitdir -exec sed -i '' \"s|$NEW_REPO_PATH|$REPO_PATH|g\" {} +"
 echo
 echo "  4. Remove the backup:"
 echo "     rm -rf $BACKUP_PATH"
