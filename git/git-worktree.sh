@@ -46,6 +46,8 @@ fi
 # Install dependencies
 echo "Checking for dependencies..."
 cd "$dir" && {
+    git branch --set-upstream-to="origin/$branch" "$branch" >/dev/null 2>&1 || true
+
     if [ -f "pnpm-lock.yaml" ]; then
         echo "Installing with pnpm..."
         pnpm install || echo "Warning: pnpm install failed"
