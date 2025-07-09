@@ -86,7 +86,13 @@ cd ..
 
 # Get the default branch name
 print_step "Detecting default branch..."
-DEFAULT_BRANCH=$(cd .bare && git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+DEFAULT_BRANCH=$(cd .bare && git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+
+if [ -z "$DEFAULT_BRANCH" ]; then
+    # Try to set the default branch
+    (cd .bare && git remote set-head origin --auto 2>/dev/null)
+    DEFAULT_BRANCH=$(cd .bare && git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+fi
 
 if [ -z "$DEFAULT_BRANCH" ]; then
     # Fallback to common branch names if detection fails
@@ -106,7 +112,15 @@ print_info "Default branch detected: $DEFAULT_BRANCH"
 
 # Create worktree for default branch with proper tracking
 print_step "Creating worktree for $DEFAULT_BRANCH branch..."
-git worktree add --track -b "$DEFAULT_BRANCH" "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH"
+if git show-ref --verify --quiet "refs/heads/$DEFAULT_BRANCH"; then
+    # Local branch already exists
+    git worktree add "$DEFAULT_BRANCH" "$DEFAULT_BRANCH"
+    # Set up tracking
+    (cd "$DEFAULT_BRANCH" && git branch --set-upstream-to="origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH" 2>/dev/null || true)
+else
+    # Create new branch with tracking
+    git worktree add --track -b "$DEFAULT_BRANCH" "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH"
+fi
 
 # Show available branches
 echo
