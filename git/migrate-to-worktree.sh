@@ -31,6 +31,18 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+# Check Git version for relative worktree path support (2.20+)
+GIT_VERSION=$(git --version | sed 's/git version //')
+GIT_MAJOR=$(echo "$GIT_VERSION" | cut -d. -f1)
+GIT_MINOR=$(echo "$GIT_VERSION" | cut -d. -f2)
+
+if [ "$GIT_MAJOR" -lt 2 ] || ([ "$GIT_MAJOR" -eq 2 ] && [ "$GIT_MINOR" -lt 20 ]); then
+    print_error "This script requires Git 2.20 or later for relative worktree paths."
+    print_error "Your Git version: $GIT_VERSION"
+    print_error "Please upgrade Git before running this script."
+    exit 1
+fi
+
 REPO_PATH="$1"
 
 # Convert to absolute path
@@ -110,6 +122,9 @@ echo "gitdir: ./.bare" > .git
 # CRITICAL FIX: Configure the bare repo with standard fetch refspec
 cd .bare
 git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+
+# Enable relative worktree paths (Git 2.20+)
+git config worktree.useRelativePaths true
 
 # CRITICAL FIX: Update remote URL to the actual remote, not the backup
 if [ -n "$REMOTE_URL" ]; then
@@ -191,7 +206,7 @@ echo "  4. Remove the backup:"
 echo "     rm -rf $BACKUP_PATH"
 echo
 echo "Creating worktrees for other branches:"
-echo "  cd $NEW_REPO_PATH"
+echo "  cd $REPO_PATH"
 echo "  git worktree add <folder-name> <branch-name>"
 echo
 print_warning "The original repository is still at: $REPO_PATH"
