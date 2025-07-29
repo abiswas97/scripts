@@ -61,4 +61,70 @@ cd "$dir" && {
     cd - >/dev/null
 }
 
+find_source_worktree() {
+    local main_worktree=""
+    local latest_worktree=""
+    local latest_time=0
+    
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^worktree[[:space:]](.+)$ ]]; then
+            local wt_path="${BASH_REMATCH[1]}"
+            # Skip bare repo and the current new worktree
+            if [[ "$wt_path" != *".bare" ]] && [[ "$wt_path" != *"/$dir" ]]; then
+                if git -C "$wt_path" branch --show-current 2>/dev/null | grep -q "^main$"; then
+                    main_worktree="$wt_path"
+                fi
+                
+                if [[ -d "$wt_path" ]]; then
+                    local mod_time=$(stat -f %m "$wt_path" 2>/dev/null || stat -c %Y "$wt_path" 2>/dev/null || echo 0)
+                    if [[ "$mod_time" -gt "$latest_time" ]]; then
+                        latest_time="$mod_time"
+                        latest_worktree="$wt_path"
+                    fi
+                fi
+            fi
+        fi
+    done < <(git worktree list --porcelain)
+    
+    if [[ -n "$main_worktree" ]]; then
+        echo "$main_worktree"
+    else
+        echo "$latest_worktree"
+    fi
+}
+
+copy_env_files() {
+    local source_wt="$1"
+    local dest_wt="$2"
+    
+    if [[ -z "$source_wt" ]] || [[ ! -d "$source_wt" ]]; then
+        echo "No source worktree found for copying .env files"
+        return
+    fi
+    
+    echo "Copying .env files from: $source_wt"
+    
+    local copied=0
+    while IFS= read -r env_file; do
+        if [[ -f "$env_file" ]]; then
+            local basename=$(basename "$env_file")
+            cp -p "$env_file" "$dest_wt/$basename" 2>/dev/null && {
+                echo "  Copied: $basename"
+                ((copied++))
+            }
+        fi
+    done < <(find "$source_wt" -maxdepth 1 -name ".env*" -type f 2>/dev/null)
+    
+    if [[ "$copied" -eq 0 ]]; then
+        echo "  No .env files found to copy"
+    else
+        echo "  Total files copied: $copied"
+    fi
+}
+
+source_worktree=$(find_source_worktree)
+if [[ -n "$source_worktree" ]]; then
+    copy_env_files "$source_worktree" "$dir"
+fi
+
 echo "Worktree ready at: $dir"
