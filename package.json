@@ -1,0 +1,35 @@
+{
+  "name": "@personal/tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal utility packages and scripts monorepo",
+  "scripts": {
+    "setup": "pnpm install",
+    "tw": "pnpm --filter @personal/ticket-workspace",
+    "list-packages": "pnpm list --recursive --depth 0"
+  },
+  "keywords": [
+    "tools",
+    "utilities",
+    "scripts",
+    "git",
+    "workspace"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.4",
+    "typescript": "^5.9.2"
+  }
+}

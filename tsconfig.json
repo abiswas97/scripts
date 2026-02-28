@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "baseUrl": ".",
+    "paths": {
+      "@personal/scripts": ["./scripts"],
+      "@personal/ticket-workspace": ["./packages/ticket-workspace/lib"]
+    }
+  },
+  "references": [
+    { "path": "./packages/ticket-workspace" }
+  ],
+  "files": []
+}

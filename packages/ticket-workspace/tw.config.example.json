@@ -1,0 +1,85 @@
+{
+  "shadow": {
+    "enabled": true,
+    "syncPatterns": [
+      "^\\.env.*",
+      "^\\.nvmrc$",
+      "^\\.ruby-version$",
+      "^config.*\\.json$",
+      "^\\.gitignore$"
+    ],
+    "location": ".ticket-workspaces",
+    "defaultToShadow": true
+  },
+  "launchConfigs": {
+    "repositories": {
+      "frontend": {
+        "name": "Frontend",
+        "configs": [
+          {
+            "name": "Start Dev Server",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder:{{folderName}}}",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev"],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+          },
+          {
+            "name": "Frontend Tests",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder:{{folderName}}}",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["test"],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+          }
+        ]
+      },
+      "backend": {
+        "name": "Backend",
+        "configs": [
+          {
+            "name": "Start API Server",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder:{{folderName}}}",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "start"],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+          },
+          {
+            "name": "Backend Tests",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder:{{folderName}}}",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["test"],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+          }
+        ]
+      }
+    },
+    "compounds": [
+      {
+        "name": "Full Stack",
+        "requires": ["frontend", "backend"],
+        "configurations": [
+          "Start Dev Server",
+          "Start API Server"
+        ],
+        "stopAll": true
+      },
+      {
+        "name": "Run All Tests",
+        "requires": ["frontend", "backend"],
+        "configurations": ["Frontend Tests", "Backend Tests"],
+        "stopAll": true
+      }
+    ]
+  }
+}
