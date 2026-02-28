@@ -53,6 +53,8 @@ PRUNE_DIRS=(
 # Output Helpers
 # =============================================================================
 
+VERBOSE=false
+
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
@@ -117,7 +119,11 @@ run_install_for_manager() {
         registry_parse "$entry"
         if [[ "$R_NAME" == "$manager_name" ]]; then
             # shellcheck disable=SC2086
-            (cd "$dir" && $R_INSTALL) >/dev/null 2>&1
+            if [[ "$VERBOSE" == true ]]; then
+                (cd "$dir" && $R_INSTALL)
+            else
+                (cd "$dir" && $R_INSTALL) >/dev/null 2>&1
+            fi
             return $?
         fi
     done
@@ -479,7 +485,16 @@ usage() {
     echo "Options:"
     echo "  --no-install    Skip dependency installation"
     echo "  --no-merge      Skip merging the default branch"
+    echo "  -v, --verbose   Show install and merge output"
     echo "  -h, --help      Show this help message"
+    echo ""
+    local cmd
+    cmd=$(basename "$0")
+    echo "Examples:"
+    echo "  $cmd feature/auth              Create worktree for feature/auth"
+    echo "  $cmd origin/fix/bug-123        Handle origin/ prefix automatically"
+    echo "  $cmd --no-install hotfix       Quick worktree, skip installs"
+    echo "  $cmd -v feature/debug          Show full install output"
 }
 
 main() {
@@ -489,10 +504,11 @@ main() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --no-install) skip_install=true; shift ;;
-            --no-merge)   skip_merge=true; shift ;;
-            -h|--help)    usage; exit 0 ;;
-            -*)           echo "Unknown option: $1"; usage; exit 1 ;;
+            --no-install)  skip_install=true; shift ;;
+            --no-merge)    skip_merge=true; shift ;;
+            -v|--verbose)  VERBOSE=true; shift ;;
+            -h|--help)     usage; exit 0 ;;
+            -*)            echo "Unknown option: $1"; usage; exit 1 ;;
             *)
                 if [[ -n "$branch_arg" ]]; then
                     echo "Too many arguments"; usage; exit 1
@@ -503,6 +519,16 @@ main() {
 
     if [[ -z "$branch_arg" ]]; then
         usage
+        exit 1
+    fi
+
+    local start_time=$SECONDS
+
+    local git_common_dir
+    git_common_dir=$(git rev-parse --git-common-dir 2>/dev/null) || true
+    if [[ -z "${git_common_dir:-}" ]] || [[ "$git_common_dir" == ".git" ]]; then
+        warn "Not a bare repository worktree setup"
+        detail "Run setup-worktree or migrate-to-worktree first"
         exit 1
     fi
 
@@ -517,13 +543,13 @@ main() {
     if git worktree list --porcelain | grep -q "worktree.*/$dir$"; then
         if ! git worktree remove "$dir" 2>/dev/null; then
             warn "Worktree has uncommitted changes"
-            echo "Run: git worktree remove -f $dir"
+            detail "git worktree remove -f $dir"
             exit 1
         fi
     fi
 
     local bare_repo_root
-    bare_repo_root=$(dirname "$(git rev-parse --git-common-dir)")
+    bare_repo_root=$(dirname "$git_common_dir")
     local worktree_path="$bare_repo_root/$dir"
 
     if git ls-remote --exit-code origin "$branch" >/dev/null 2>&1; then
@@ -535,15 +561,27 @@ main() {
 
     git -C "$worktree_path" branch --set-upstream-to="origin/$branch" "$branch" >/dev/null 2>&1 || true
 
-    if [[ "$skip_merge" == false ]]; then
-        local default_branch
-        default_branch=$(get_default_branch)
+    local default_branch
+    default_branch=$(get_default_branch)
+
+    if [[ "$skip_merge" == false ]] && [[ "$branch" != "$default_branch" ]]; then
         cd "$worktree_path" && {
-            if git merge "origin/$default_branch" --no-edit >/dev/null 2>&1; then
-                info "Merged origin/$default_branch"
+            if [[ "$VERBOSE" == true ]]; then
+                if git merge "origin/$default_branch" --no-edit; then
+                    info "Merged origin/$default_branch"
+                else
+                    git merge --abort 2>/dev/null
+                    warn "Merge conflicts with origin/$default_branch"
+                    detail "cd $worktree_path && git merge origin/$default_branch"
+                fi
             else
-                git merge --abort 2>/dev/null
-                warn "Merge conflicts with origin/$default_branch — resolve manually"
+                if git merge "origin/$default_branch" --no-edit >/dev/null 2>&1; then
+                    info "Merged origin/$default_branch"
+                else
+                    git merge --abort 2>/dev/null
+                    warn "Merge conflicts with origin/$default_branch"
+                    detail "cd $worktree_path && git merge origin/$default_branch"
+                fi
             fi
             cd - >/dev/null
         }
@@ -568,8 +606,13 @@ main() {
         fi
     fi
 
+    [[ "$skip_merge" == true ]] && detail "Skipped merge (--no-merge)"
+    [[ "$skip_install" == true ]] && detail "Skipped install (--no-install)"
+
+    local elapsed=$(( SECONDS - start_time ))
     echo ""
-    info "Worktree ready: $dir"
+    info "Worktree ready: $dir (${elapsed}s)"
+    detail "cd $worktree_path"
 }
 
 main "$@"
